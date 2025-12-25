@@ -1,0 +1,58 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool: Default
+
+stages:
+  - stage: sacning
+    jobs:
+      - job: scaningJob
+        steps:
+        - task: CmdLine@2
+          inputs:
+            script: |
+              tflint --chdir=Enviornment/Dev --init
+              tflint --chdir=Enviornment/Dev --recursive
+    
+      - job: initPlanJob
+        steps:
+          - task: TerraformInstaller@1
+            inputs:
+              terraformVersion: 'latest'
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'init'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/Enviornment/Dev'
+              backendServiceArm: 'DJSVC'
+              backendAzureRmResourceGroupName: 'rg-arif'
+              backendAzureRmStorageAccountName: 'rfbackendstorage'
+              backendAzureRmContainerName: 'tfstate'
+              backendAzureRmKey: 'assignment.tfstate'
+          - task: TerraformTask@5
+            inputs:
+              provider: 'azurerm'
+              command: 'plan'
+              workingDirectory: '$(System.DefaultWorkingDirectory)/Enviornment/Dev'
+              environmentServiceNameAzureRM: 'DJSVC'
+
+  - stage: Deploy
+    jobs:
+      - job: terraformApply
+        steps:
+        - task: TerraformInstaller@1
+          inputs:
+            terraformVersion: 'latest'
+        - task: TerraformTask@5
+          inputs:
+            provider: 'azurerm'
+            command: 'init'
+            workingDirectory: '$(System.DefaultWorkingDirectory)/Enviornment/Dev'
+            backendServiceArm: 'DJSVC'
+            backendAzureRmResourceGroupName: 'rg-arif'
+            backendAzureRmStorageAccountName: 'rfbackendstorage'
+            backendAzureRmContainerName: 'tfstate'
+            backendAzureRmKey: 'assignment.tfstate'
+         
